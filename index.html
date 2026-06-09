@@ -409,7 +409,7 @@ body.admin-on .editor{display:block;}
       <button type="button" class="btn btn-ghost" id="btn-photo" style="width:100%;margin-top:8px;padding:11px;font-size:13.5px">📷 기기에서 사진 첨부 (여러 장 가능)</button>
       <input id="ed-photo-file" type="file" accept="image/*" multiple style="display:none">
       <div id="ed-photo-status" style="font-size:11.5px;color:var(--green);margin-top:7px"></div>
-      <div class="hint" style="margin-top:8px">GitHub에 올린 사진은 <b>cheom1.png</b>처럼 파일명만 입력하면 휴대폰에서도 보입니다.</div>
+      <div class="hint" style="margin-top:8px">이 버전은 <b>정원사진/장소명/p1.png ~ p10.png</b>를 자동으로 불러옵니다. 사진 파일명만 규칙대로 올리면 index.html 수정 없이 반영됩니다.</div>
     </div>
     <div class="field"><label>한줄소개</label><input id="ed-summary" type="text"></div>
     <div class="field"><label>상세설명</label><textarea id="ed-description"></textarea></div>
@@ -785,10 +785,38 @@ function openLink(u){window.open(u,'_blank');}
 
 /* photo block — URL 있으면 이미지, 없으면 초록 정원 아이콘 */
 const leafIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="#4f9a63" stroke-width="1.6"><path d="M11 20A7 7 0 0 1 4 13C4 8 8 4 12 3c4 1 8 5 8 10a7 7 0 0 1-7 7Z"/><path d="M12 21V9"/><path d="M12 13c-2-1-3-3-3-3M12 16c2-1 3-3 3-3"/></svg>`;
+/* 장소별 자동 사진 경로
+   - GitHub에 정원사진/장소명/p1.png ~ p10.png 형식으로 올리면
+     index.html을 다시 수정하지 않아도 앱이 자동으로 시도합니다.
+   - 없는 파일은 화면에서 자동으로 숨겨집니다. */
+const PHOTO_BASE_DIR = "정원사진";
+const MAX_PLACE_PHOTOS = 10;
+const PLACE_PHOTO_FOLDER = {
+  "첨단아미둘레길":"첨단아미둘레길",
+  "첨단마을둘레길":"첨단마을둘레길",
+  "금구초녹도":"금구초녹도",
+  "월곡동녹도":"월곡동녹도",
+  "쌍암공원":"쌍암공원",
+  "응암공원":"응암공원",
+  "수완호수공원":"수완호수공원",
+  "황룡강생태정원":"황룡강생태정원"
+};
+function compactName(s){return String(s||"").replace(/\s/g,"");}
+function autoPhotoPaths(g){
+  const folder = PLACE_PHOTO_FOLDER[compactName(g.name)];
+  if(!folder) return [];
+  return Array.from({length:MAX_PLACE_PHOTOS},(_,i)=>`${PHOTO_BASE_DIR}/${folder}/p${i+1}.png`);
+}
 function photosOf(g){
-  if(Array.isArray(g.photos)) return g.photos.filter(u=>u&&String(u).trim());
+  const auto = autoPhotoPaths(g);
+  if(auto.length) return auto;
+  if(Array.isArray(g.photos)) return g.photos.filter(u=>u&&String(u).trim()).slice(0,MAX_PLACE_PHOTOS);
   if(g.photo) return [g.photo];
   return [];
+}
+function imgErrorRemove(img){
+  const item = img.closest('.ps-item');
+  if(item) item.remove();
 }
 /* 단일 썸네일 (내 주변 목록 등): 첫 사진 또는 초록 아이콘 */
 function photoBlock(g){
@@ -802,17 +830,15 @@ function photoBlock(g){
 function photoStrip(g){
   const ps=photosOf(g);
   if(!ps.length) return `<div class="photo-scroll"><div class="ps-item ph"></div></div>`;
-  const items=ps.map(u=>`<div class="ps-item"><img src="${esc(u)}" onerror="this.remove();this.parentNode.classList.add('ph')"></div>`).join("");
-  const badge=ps.length>1?`<div class="ps-count">📷 ${ps.length}</div>`:"";
-  return `<div class="photo-scroll">${items}${badge}</div>`;
+  const items=ps.map(u=>`<div class="ps-item"><img src="${esc(u)}" onerror="imgErrorRemove(this)"></div>`).join("");
+  return `<div class="photo-scroll">${items}<div class="ps-count">📷 최대 ${MAX_PLACE_PHOTOS}장 자동</div></div>`;
 }
 /* 가로 스크롤 사진 (상세화면, 더 큼) */
 function photoGallery(g){
   const ps=photosOf(g);
   if(!ps.length) return `<div class="photo-scroll detail"><div class="ps-item ph"></div></div>`;
-  const items=ps.map(u=>`<div class="ps-item"><img src="${esc(u)}" onerror="this.remove();this.parentNode.classList.add('ph')"></div>`).join("");
-  const badge=ps.length>1?`<div class="ps-count">📷 ${ps.length}장 · 옆으로 넘겨보세요</div>`:"";
-  return `<div class="photo-scroll detail">${items}${badge}</div>`;
+  const items=ps.map(u=>`<div class="ps-item"><img src="${esc(u)}" onerror="imgErrorRemove(this)"></div>`).join("");
+  return `<div class="photo-scroll detail">${items}<div class="ps-count">📷 p1~p10 자동 표시</div></div>`;
 }
 
 /* =========================================================
