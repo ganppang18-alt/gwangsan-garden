@@ -346,11 +346,32 @@ body.admin-on .editor{display:block;}
 .empty svg{width:56px;height:56px;opacity:.5;margin-bottom:10px;}
 .empty p{font-size:14px;line-height:1.6;}
 
-/* 좁은 폭에서도 편집 중에는 작업 패널 + 앱을 나란히(앱은 오른쪽) 유지 */
+/* 휴대폰/좁은 화면 관리자 모드: 앱 미리보기는 숨기고 관리자 작업 화면만 표시 */
 @media(max-width:700px){
-  body.admin-on .editor{flex:1 1 0;min-width:0;}
-  body.admin-on .preview-wrap{flex:1 1 0;min-width:0;}
-  body.admin-on .phone{flex-shrink:1;width:100%;max-width:100%;}
+  body.admin-on{background:var(--cream);}
+  body.admin-on .stage{
+    display:block;
+    padding:0;
+    margin:0;
+    max-width:none;
+    width:100%;
+  }
+  body.admin-on .editor{
+    display:block;
+    width:100%;
+    max-width:none;
+    min-width:0;
+    min-height:100vh;
+    min-height:100dvh;
+    border-radius:0;
+    box-shadow:none;
+    position:static;
+    top:auto;
+    max-height:none;
+    overflow-y:visible;
+    padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(28px + env(safe-area-inset-bottom,0px));
+  }
+  body.admin-on .preview-wrap{display:none;}
 }
 /* 작은 휴대폰(일반 사용자): 작업 패널 없음 · 앱이 화면을 꽉 채움 */
 @media(max-width:540px){
