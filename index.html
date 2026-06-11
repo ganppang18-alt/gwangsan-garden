@@ -504,9 +504,8 @@ body.admin-on .editor{display:block;}
 <script type="module">
 /* =========================================================
    Firebase 연결 설정
-   1) Firebase 콘솔 > 프로젝트 설정 > 내 앱(Web)에서 firebaseConfig 값을 복사해 아래에 붙여넣으세요.
-   2) apiKey 등이 실제 값으로 바뀌면 Firestore/Storage를 사용합니다.
-   3) 값이 비어 있으면 기존처럼 이 브라우저 저장 방식으로만 동작합니다.
+   - Firestore: 장소 데이터 저장
+   - Storage: 장소별 사진 업로드
    ========================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDBGehvmCEf_i9sALejTixvgkxOQWnD1Wo",
@@ -519,54 +518,63 @@ const firebaseConfig = {
 };
 
 function firebaseConfigured(){
-  return firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("여기에") && firebaseConfig.projectId && !firebaseConfig.projectId.includes("여기에");
+  return firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.storageBucket;
 }
 
-if(firebaseConfigured()){
-  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
-  const { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-  const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js");
+window.firebaseGardenEnabled = false;
+window.firebaseGardenReady = (async function(){
+  try{
+    if(!firebaseConfigured()) return false;
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+    const { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js");
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
-  const gardenDoc = doc(db, "jeongwon", "gardenData");
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const gardenDoc = doc(db, "jeongwon", "gardenData");
 
-  window.firebaseGardenEnabled = true;
+    window.firebaseGardenLoad = async function(){
+      const snap = await getDoc(gardenDoc);
+      if(!snap.exists()) return null;
+      const data = snap.data();
+      return Array.isArray(data.gardens) ? data.gardens : null;
+    };
 
-  window.firebaseGardenLoad = async function(){
-    const snap = await getDoc(gardenDoc);
-    if(!snap.exists()) return null;
-    const data = snap.data();
-    return Array.isArray(data.gardens) ? data.gardens : null;
-  };
+    window.firebaseGardenSave = async function(gardens){
+      await setDoc(gardenDoc, {
+        gardens: JSON.parse(JSON.stringify(gardens)),
+        updatedAt: serverTimestamp()
+      }, { merge:true });
+    };
 
-  window.firebaseGardenSave = async function(gardens){
-    await setDoc(gardenDoc, {
-      gardens: JSON.parse(JSON.stringify(gardens)),
-      updatedAt: serverTimestamp()
-    }, { merge:true });
-  };
+    window.firebaseGardenListen = function(callback){
+      return onSnapshot(gardenDoc, snap=>{
+        if(!snap.exists()) return;
+        const data=snap.data();
+        if(Array.isArray(data.gardens)) callback(data.gardens);
+      });
+    };
 
-  window.firebaseGardenListen = function(callback){
-    return onSnapshot(gardenDoc, snap=>{
-      if(!snap.exists()) return;
-      const data=snap.data();
-      if(Array.isArray(data.gardens)) callback(data.gardens);
-    });
-  };
+    window.firebaseGardenUpload = async function(placeName, file){
+      const safePlace = String(placeName||"새정원").replace(/[\/#?%*:|"<>]/g,"_").trim() || "새정원";
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `garden-photos/${safePlace}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file, { contentType:file.type || "image/jpeg" });
+      return await getDownloadURL(storageRef);
+    };
 
-  window.firebaseGardenUpload = async function(placeName, file){
-    const safePlace = String(placeName||"새정원").replace(/[\\/#?%*:|\"<>]/g,"_").trim() || "새정원";
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `garden-photos/${safePlace}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file, { contentType:file.type || "image/jpeg" });
-    return await getDownloadURL(storageRef);
-  };
-}else{
-  window.firebaseGardenEnabled = false;
-}
+    window.firebaseGardenEnabled = true;
+    window.dispatchEvent(new Event("firebaseGardenReady"));
+    return true;
+  }catch(err){
+    console.error("Firebase init failed", err);
+    window.firebaseGardenEnabled = false;
+    window.dispatchEvent(new Event("firebaseGardenReady"));
+    return false;
+  }
+})();
 </script>
 
 <script>
@@ -771,7 +779,18 @@ function loadPersisted(){
   }catch(e){}
 }
 let _saveTimer=null;
-function scheduleSave(){ clearTimeout(_saveTimer); _saveTimer=setTimeout(persist,600); }
+function scheduleSave(){
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{
+    persist();
+    if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
+      window.firebaseGardenSave(gardenData).catch(err=>{
+        console.error(err);
+        toast("⚠️ Firebase 저장 실패: 규칙·권한을 확인하세요");
+      });
+    }
+  },600);
+}
 
 function toast(msg){
   let t=document.getElementById("toast");
@@ -923,9 +942,12 @@ function autoPhotoPaths(g){
 }
 function photosOf(g){
   const manual = Array.isArray(g.photos) ? g.photos.filter(u=>u&&String(u).trim()) : (g.photo ? [g.photo] : []);
+  const firebaseUrls = manual.filter(u=>String(u).startsWith("https://firebasestorage.googleapis.com/"));
+  const localUrls = manual.filter(u=>!String(u).startsWith("https://firebasestorage.googleapis.com/"));
   const auto = autoPhotoPaths(g);
   const merged = [];
-  [...manual, ...auto].forEach(u=>{
+  // Firebase에 업로드한 사진을 항상 먼저 보여줍니다.
+  [...firebaseUrls, ...localUrls, ...auto].forEach(u=>{
     const key=String(u).trim();
     if(key && !merged.includes(key)) merged.push(key);
   });
@@ -1523,10 +1545,13 @@ function bindEditor(){
         const url = await window.firebaseGardenUpload(g.name, file);
         const gg=gardenById(edId);
         if(gg && Array.isArray(gg.photos) && gg.photos.length<10) gg.photos.push(url);
-      })).then(()=>{
+      })).then(async()=>{
         status.textContent="✅ 업로드 완료";
         renderPhotoThumbs(); refreshPreview(); persist();
-        toast("☁️ 사진이 Firebase에 저장됐어요");
+        if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
+          await window.firebaseGardenSave(gardenData);
+        }
+        toast("☁️ 사진과 장소 정보가 Firebase에 저장됐어요");
       }).catch(err=>{
         console.error(err);
         status.textContent="⚠️ 업로드 실패: Firebase Storage 권한을 확인하세요";
@@ -1560,14 +1585,24 @@ function bindEditor(){
       category:"공원",photos:[],summary:"한줄소개를 입력하세요",description:"",points:"",facilities:"",seasons:"봄, 가을",times:"아침, 저녁",note:"",themes:[]});
     edId=newId; bindEditor(); refreshPreview(); scheduleSave();
   };
-  document.getElementById("btn-save").onclick=()=>{
+  document.getElementById("btn-save").onclick=async()=>{
     const ok=persist();
-    toast(ok?"✅ 저장되었어요! 다음에 열어도 그대로예요":"⚠️ 이 미리보기에선 저장이 제한돼요 · 파일을 브라우저로 열면 저장됩니다");
+    if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
+      try{
+        await window.firebaseGardenSave(gardenData);
+        toast("☁️ Firebase에 저장됐어요. 다른 기기에도 반영됩니다");
+      }catch(err){
+        console.error(err);
+        toast("⚠️ Firebase 저장 실패: Firestore 규칙을 확인하세요");
+      }
+    }else{
+      toast(ok?"✅ 이 기기에 저장되었어요":"⚠️ 이 미리보기에선 저장이 제한돼요");
+    }
   };
   document.getElementById("btn-reset").onclick=()=>{
     if(!confirm("모든 수정 내용을 지우고 처음 예시 데이터로 되돌릴까요?")) return;
     gardenData.length=0; JSON.parse(JSON.stringify(SEED)).forEach(x=>gardenData.push(x));
-    edId=gardenData[0].id; persist(); bindEditor(); refreshPreview();
+    edId=gardenData[0].id; persist(); bindEditor(); refreshPreview(); scheduleSave();
     toast("🌱 처음 예시 데이터로 되돌렸어요");
   };
   document.getElementById("btn-chpw").onclick=()=>changeAdminPw();
@@ -1583,7 +1618,7 @@ function bindEditor(){
       if(!confirm(`엑셀에서 ${parsed.length}개 장소를 불러옵니다. 기존 데이터를 모두 교체할까요?\n(취소를 누르면 그대로 둡니다)`)) return;
       gardenData.length=0; parsed.forEach(x=>gardenData.push(x));
       normalizePhotos(gardenData); normalizeThemes(gardenData);
-      edId=gardenData[0].id; persist(); bindEditor(); refreshPreview();
+      edId=gardenData[0].id; persist(); bindEditor(); refreshPreview(); scheduleSave();
       toast(`📊 ${parsed.length}개 장소를 불러왔어요`);
     };
     reader.readAsText(file,"utf-8");
@@ -1763,7 +1798,17 @@ normalizeThemes(gardenData);
 })();
 bindEditor();
 setScreen("home");
-initFirebaseSync();
+
+function startFirebaseSyncWhenReady(){
+  const run=()=>initFirebaseSync();
+  if(window.firebaseGardenReady && typeof window.firebaseGardenReady.then === "function"){
+    window.firebaseGardenReady.then(run).catch(run);
+  }else{
+    window.addEventListener("firebaseGardenReady", run, {once:true});
+    setTimeout(run,1800);
+  }
+}
+startFirebaseSyncWhenReady();
 </script>
 </body>
 </html>
