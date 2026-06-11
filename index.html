@@ -500,6 +500,75 @@ body.admin-on .editor{display:block;}
   </div>
 </div>
 
+
+<script type="module">
+/* =========================================================
+   Firebase 연결 설정
+   1) Firebase 콘솔 > 프로젝트 설정 > 내 앱(Web)에서 firebaseConfig 값을 복사해 아래에 붙여넣으세요.
+   2) apiKey 등이 실제 값으로 바뀌면 Firestore/Storage를 사용합니다.
+   3) 값이 비어 있으면 기존처럼 이 브라우저 저장 방식으로만 동작합니다.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDBGehvmCEf_i9sALejTixvgkxOQWnD1Wo",
+  authDomain: "gwangsan-garden.firebaseapp.com",
+  projectId: "gwangsan-garden",
+  storageBucket: "gwangsan-garden.firebasestorage.app",
+  messagingSenderId: "44817124693",
+  appId: "1:44817124693:web:5e357c8d52ce557c3833dc",
+  measurementId: "G-8F4ZW4F6M7"
+};
+
+function firebaseConfigured(){
+  return firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("여기에") && firebaseConfig.projectId && !firebaseConfig.projectId.includes("여기에");
+}
+
+if(firebaseConfigured()){
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+  const { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+  const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js");
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+  const gardenDoc = doc(db, "jeongwon", "gardenData");
+
+  window.firebaseGardenEnabled = true;
+
+  window.firebaseGardenLoad = async function(){
+    const snap = await getDoc(gardenDoc);
+    if(!snap.exists()) return null;
+    const data = snap.data();
+    return Array.isArray(data.gardens) ? data.gardens : null;
+  };
+
+  window.firebaseGardenSave = async function(gardens){
+    await setDoc(gardenDoc, {
+      gardens: JSON.parse(JSON.stringify(gardens)),
+      updatedAt: serverTimestamp()
+    }, { merge:true });
+  };
+
+  window.firebaseGardenListen = function(callback){
+    return onSnapshot(gardenDoc, snap=>{
+      if(!snap.exists()) return;
+      const data=snap.data();
+      if(Array.isArray(data.gardens)) callback(data.gardens);
+    });
+  };
+
+  window.firebaseGardenUpload = async function(placeName, file){
+    const safePlace = String(placeName||"새정원").replace(/[\\/#?%*:|\"<>]/g,"_").trim() || "새정원";
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `garden-photos/${safePlace}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file, { contentType:file.type || "image/jpeg" });
+    return await getDownloadURL(storageRef);
+  };
+}else{
+  window.firebaseGardenEnabled = false;
+}
+</script>
+
 <script>
 /* =========================================================
    1) 데이터 (분리 — 나중에 JSON/엑셀로 쉽게 교체·확장 가능)
@@ -681,7 +750,16 @@ const SEED=JSON.parse(JSON.stringify(gardenData));
 const STORE_KEY="jeongwon_garden_v1";
 
 function persist(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(gardenData)); return true; }
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(gardenData));
+    if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
+      window.firebaseGardenSave(gardenData).catch(err=>{
+        console.warn("Firebase 저장 실패", err);
+        toast("⚠️ Firebase 저장 실패: 권한 또는 설정을 확인하세요");
+      });
+    }
+    return true;
+  }
   catch(e){ return false; }
 }
 function loadPersisted(){
@@ -844,11 +922,14 @@ function autoPhotoPaths(g){
   return Array.from({length:MAX_PLACE_PHOTOS},(_,i)=>`${PHOTO_BASE_DIR}/${folder}/p${i+1}.png`);
 }
 function photosOf(g){
+  const manual = Array.isArray(g.photos) ? g.photos.filter(u=>u&&String(u).trim()) : (g.photo ? [g.photo] : []);
   const auto = autoPhotoPaths(g);
-  if(auto.length) return auto;
-  if(Array.isArray(g.photos)) return g.photos.filter(u=>u&&String(u).trim()).slice(0,MAX_PLACE_PHOTOS);
-  if(g.photo) return [g.photo];
-  return [];
+  const merged = [];
+  [...manual, ...auto].forEach(u=>{
+    const key=String(u).trim();
+    if(key && !merged.includes(key)) merged.push(key);
+  });
+  return merged.slice(0,MAX_PLACE_PHOTOS);
 }
 function imgErrorRemove(img){
   const item = img.closest('.ps-item');
@@ -1435,6 +1516,25 @@ function bindEditor(){
     const remain=10-g.photos.length;
     const files=[...e.target.files].slice(0,Math.max(0,remain));
     if(e.target.files.length>remain) toast("최대 10장까지 등록돼요");
+    if(window.firebaseGardenEnabled && typeof window.firebaseGardenUpload === "function"){
+      const status=document.getElementById("ed-photo-status");
+      status.textContent="☁️ Firebase에 사진 업로드 중...";
+      Promise.all(files.map(async file=>{
+        const url = await window.firebaseGardenUpload(g.name, file);
+        const gg=gardenById(edId);
+        if(gg && Array.isArray(gg.photos) && gg.photos.length<10) gg.photos.push(url);
+      })).then(()=>{
+        status.textContent="✅ 업로드 완료";
+        renderPhotoThumbs(); refreshPreview(); persist();
+        toast("☁️ 사진이 Firebase에 저장됐어요");
+      }).catch(err=>{
+        console.error(err);
+        status.textContent="⚠️ 업로드 실패: Firebase Storage 권한을 확인하세요";
+        toast("⚠️ 사진 업로드 실패");
+      });
+      e.target.value="";
+      return;
+    }
     files.forEach(file=>{
       const reader=new FileReader();
       reader.onload=ev=>{
@@ -1593,6 +1693,48 @@ function importCSV(text){
   return out;
 }
 
+
+async function initFirebaseSync(){
+  if(!window.firebaseGardenEnabled){
+    console.log("Firebase 설정값이 없어 브라우저 저장 방식으로 실행합니다.");
+    return;
+  }
+  try{
+    toast("☁️ Firebase 자료를 불러오는 중이에요");
+    const remote = await window.firebaseGardenLoad();
+    if(Array.isArray(remote) && remote.length){
+      gardenData.length=0;
+      remote.forEach(x=>gardenData.push(x));
+      normalizePhotos(gardenData); normalizeThemes(gardenData);
+      edId = gardenData[0].id;
+      localStorage.setItem(STORE_KEY, JSON.stringify(gardenData));
+      bindEditor(); refreshPreview();
+      toast("☁️ Firebase 자료를 불러왔어요");
+    }else{
+      await window.firebaseGardenSave(gardenData);
+      toast("☁️ 초기 정원 데이터를 Firebase에 저장했어요");
+    }
+    if(typeof window.firebaseGardenListen === "function"){
+      window.firebaseGardenListen(remoteGardens=>{
+        if(!Array.isArray(remoteGardens) || !remoteGardens.length) return;
+        const before = JSON.stringify(gardenData);
+        const after = JSON.stringify(remoteGardens);
+        if(before === after) return;
+        gardenData.length=0;
+        remoteGardens.forEach(x=>gardenData.push(x));
+        normalizePhotos(gardenData); normalizeThemes(gardenData);
+        if(!gardenById(edId)) edId=gardenData[0].id;
+        localStorage.setItem(STORE_KEY, JSON.stringify(gardenData));
+        bindEditor(); refreshPreview();
+        toast("☁️ 다른 기기의 수정 내용이 반영됐어요");
+      });
+    }
+  }catch(err){
+    console.error(err);
+    toast("⚠️ Firebase 연결 실패: 설정값·권한·규칙을 확인하세요");
+  }
+}
+
 function refreshPreview(){
   // 현재 보고 있는 화면을 다시 그림
   if(state.screen==="home") renderHome();
@@ -1621,6 +1763,7 @@ normalizeThemes(gardenData);
 })();
 bindEditor();
 setScreen("home");
+initFirebaseSync();
 </script>
 </body>
 </html>
