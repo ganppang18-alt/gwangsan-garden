@@ -91,6 +91,8 @@ body.admin-on .editor{display:block;}
 .btn-primary:hover{background:var(--green-deep);transform:translateY(-1px);}
 .btn-ghost{background:var(--green-soft);color:var(--green-deep);flex:1;}
 .btn-ghost:hover{background:var(--green-mint);}
+.btn-danger{background:#fff0ee;color:#c44a3d;border:1.5px solid #f0c5bd;}
+.btn-danger:hover{background:#ffe1dc;color:#a9362a;}
 .divider{height:1px;background:var(--green-mint);margin:18px 0;border:0;}
 .hint{font-size:12px;color:var(--ink-soft);background:var(--green-soft);
   padding:11px 14px;border-radius:12px;line-height:1.6;margin-top:6px;}
@@ -463,6 +465,7 @@ body.admin-on .editor{display:block;}
       <button class="btn btn-ghost" id="btn-add">➕ 새 장소 추가</button>
       <button class="btn btn-ghost" id="btn-download">📦 데이터 백업(JSON)</button>
     </div>
+    <button class="btn btn-danger" id="btn-delete" style="width:100%;margin-top:10px;padding:12px">🗑️ 선택한 장소 삭제</button>
     <button class="btn btn-ghost" id="btn-import" style="width:100%;margin-top:10px;padding:12px">📊 장소 일괄 불러오기(CSV)</button>
     <input id="csv-file" type="file" accept=".csv,text/csv" style="display:none">
     <p class="hint" style="margin-top:8px">CSV 파일로 여러 장소를 한 번에 등록할 수 있습니다. 불러온 뒤 <b>Firebase에 저장하고 앱 반영</b>을 누르면 전체 앱에 반영됩니다. 기존 데이터를 바꾸기 전에는 <b>데이터 백업(JSON)</b>으로 보관해두세요.</p>
@@ -528,7 +531,7 @@ window.firebaseGardenReady = (async function(){
     if(!firebaseConfigured()) return false;
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
     const { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js");
+    const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js");
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -564,6 +567,15 @@ window.firebaseGardenReady = (async function(){
       const storageRef = ref(storage, path);
       await uploadBytes(storageRef, file, { contentType:file.type || "image/jpeg" });
       return await getDownloadURL(storageRef);
+    };
+
+    window.firebaseGardenDeletePhotos = async function(photoUrls){
+      const urls = (Array.isArray(photoUrls) ? photoUrls : [])
+        .filter(u => typeof u === "string" && u.includes("firebasestorage.googleapis.com"));
+      if(!urls.length) return;
+      await Promise.allSettled(urls.map(async url => {
+        try{ await deleteObject(ref(storage, url)); }catch(e){ console.warn("Storage 사진 삭제 실패", url, e); }
+      }));
     };
 
     window.firebaseGardenEnabled = true;
@@ -1456,6 +1468,30 @@ function addPhotoUrl(){
   g.photos.push(url); inp.value="";
   renderPhotoThumbs(); refreshPreview(); scheduleSave();
 }
+async function deleteCurrentGarden(){
+  const g=gardenById(edId);
+  if(!g) return;
+  if(gardenData.length<=1){ toast("장소는 최소 1개 이상 남겨두어야 해요"); return; }
+  const msg = `정말 '${g.name}' 장소를 삭제할까요?\n\n앱 목록·지도·상세화면에서 사라지고 Firebase에도 반영됩니다.`;
+  if(!confirm(msg)) return;
+  const photoUrls = Array.isArray(g.photos) ? [...g.photos] : [];
+  const idx = gardenData.findIndex(x=>x.id===edId);
+  if(idx<0) return;
+  gardenData.splice(idx,1);
+  edId = gardenData[Math.max(0, Math.min(idx, gardenData.length-1))].id;
+  normalizePhotos(gardenData); normalizeThemes(gardenData);
+  buildSelect(); buildCatList(); loadEditor(); refreshPreview(); persist();
+  try{
+    if(window.firebaseGardenEnabled && typeof window.firebaseGardenDeletePhotos === "function"){
+      await window.firebaseGardenDeletePhotos(photoUrls);
+    }
+    await saveAllAdminChangesToFirebase(false);
+    toast("🗑️ 선택한 장소를 삭제하고 앱에 반영했어요");
+  }catch(err){
+    console.error(err);
+    toast("⚠️ 장소는 화면에서 삭제됐지만 Firebase 반영을 다시 확인해 주세요");
+  }
+}
 function bindEditor(){
   buildSelect(); buildCatList(); loadEditor();
   document.getElementById("ed-select").onchange=e=>{saveEditorFieldsToCurrentGarden(); persist(); edId=parseInt(e.target.value);loadEditor();};
@@ -1525,6 +1561,7 @@ function bindEditor(){
       category:"공원",photos:[],summary:"한줄소개를 입력하세요",description:"",points:"",facilities:"",seasons:"봄, 가을",times:"아침, 저녁",note:"",themes:[]});
     edId=newId; bindEditor(); refreshPreview(); scheduleSave();
   };
+  document.getElementById("btn-delete").onclick=()=>deleteCurrentGarden();
   document.getElementById("btn-save").onclick=async()=>{
     await saveAllAdminChangesToFirebase(true);
   };
