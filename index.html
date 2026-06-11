@@ -411,11 +411,12 @@ body.admin-on .editor{display:block;}
       <b>🔧 관리자 모드</b>
       <button onclick="exitAdmin()">나가기</button>
     </div>
-    <h2>🛠️ 장소 데이터 작업 패널</h2>
-    <p class="sub">왼쪽에서 정원 정보를 수정하면 오른쪽 미리보기에 바로 반영됩니다. 다 만든 데이터는 JSON으로 내려받아 나중에 20·50개소로 쉽게 확장할 수 있어요.</p>
+    <h2>🛠️ Firebase 장소 관리 패널</h2>
+    <p class="sub">장소 정보와 사진을 수정한 뒤 <b>☁️ Firebase에 저장하고 앱 반영</b>을 누르면 컴퓨터·휴대폰·다른 사람 화면에 동일하게 반영됩니다. 입력 중에는 미리보기 화면에 먼저 반영됩니다.</p>
+    <div class="hint" style="margin-bottom:16px">운영 방식: <b>앱 코드 = GitHub/Vercel</b>, <b>장소·사진 자료 = Firebase</b>. 앞으로 장소와 사진은 이 관리자 화면에서 관리하면 됩니다.</div>
 
     <div class="field">
-      <label>장소 선택</label>
+      <label>수정할 장소 선택</label>
       <select id="ed-select"></select>
     </div>
     <hr class="divider">
@@ -439,13 +440,13 @@ body.admin-on .editor{display:block;}
       <label>사진 <span id="photo-count" style="color:var(--ink-soft);font-weight:normal">(0/10)</span></label>
       <div id="ed-photos" class="ed-photos"></div>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <input id="ed-photo-url" type="text" placeholder="사진 파일명 또는 주소 예: cheom1.png">
-        <button type="button" class="btn btn-ghost" id="btn-photo-url-add" style="flex:0 0 auto;padding:10px 16px;font-size:13.5px">추가</button>
+        <input id="ed-photo-url" type="text" placeholder="Firebase 사진 URL을 붙여넣을 때만 사용">
+        <button type="button" class="btn btn-ghost" id="btn-photo-url-add" style="flex:0 0 auto;padding:10px 16px;font-size:13.5px">URL 추가</button>
       </div>
-      <button type="button" class="btn btn-ghost" id="btn-photo" style="width:100%;margin-top:8px;padding:11px;font-size:13.5px">📷 기기에서 사진 첨부 (여러 장 가능)</button>
+      <button type="button" class="btn btn-ghost" id="btn-photo" style="width:100%;margin-top:8px;padding:11px;font-size:13.5px">📷 사진 업로드해서 공유하기</button>
       <input id="ed-photo-file" type="file" accept="image/*" multiple style="display:none">
       <div id="ed-photo-status" style="font-size:11.5px;color:var(--green);margin-top:7px"></div>
-      <div class="hint" style="margin-top:8px">이 버전은 <b>정원사진/장소명/p1.png ~ p10.png</b>를 자동으로 불러옵니다. 사진 파일명만 규칙대로 올리면 index.html 수정 없이 반영됩니다.</div>
+      <div class="hint" style="margin-top:8px">사진은 Firebase Storage에 저장됩니다. 저장 후에는 컴퓨터·휴대폰·다른 사람 화면에서 같은 사진을 볼 수 있습니다. GitHub 정원사진 폴더는 사용하지 않습니다.</div>
     </div>
     <div class="field"><label>한줄소개</label><input id="ed-summary" type="text"></div>
     <div class="field"><label>상세설명</label><textarea id="ed-description"></textarea></div>
@@ -457,24 +458,24 @@ body.admin-on .editor{display:block;}
     </div>
     <div class="field"><label>비고</label><input id="ed-note" type="text"></div>
 
-    <button class="btn btn-primary" id="btn-save" style="width:100%;padding:15px;font-size:15.5px;margin-bottom:10px">💾 변경사항 저장</button>
+    <button class="btn btn-primary" id="btn-save" style="width:100%;padding:15px;font-size:15.5px;margin-bottom:10px">☁️ Firebase에 저장하고 앱 반영</button>
     <div class="editor-actions">
-      <button class="btn btn-ghost" id="btn-add">➕ 장소 추가</button>
-      <button class="btn btn-ghost" id="btn-download">⬇️ JSON 보기 / 내보내기</button>
+      <button class="btn btn-ghost" id="btn-add">➕ 새 장소 추가</button>
+      <button class="btn btn-ghost" id="btn-download">📦 데이터 백업(JSON)</button>
     </div>
-    <button class="btn btn-ghost" id="btn-import" style="width:100%;margin-top:10px;padding:12px">📊 엑셀(CSV) 불러오기</button>
+    <button class="btn btn-ghost" id="btn-import" style="width:100%;margin-top:10px;padding:12px">📊 장소 일괄 불러오기(CSV)</button>
     <input id="csv-file" type="file" accept=".csv,text/csv" style="display:none">
-    <p class="hint" style="margin-top:8px">📊 엑셀 서식에 입력한 뒤 <b>CSV UTF-8</b> 형식으로 저장해 불러오세요. 불러오면 기존 데이터를 교체하니, 먼저 <b>JSON 내보내기</b>로 백업해두면 안전해요.</p>
+    <p class="hint" style="margin-top:8px">CSV 파일로 여러 장소를 한 번에 등록할 수 있습니다. 불러온 뒤 <b>Firebase에 저장하고 앱 반영</b>을 누르면 전체 앱에 반영됩니다. 기존 데이터를 바꾸기 전에는 <b>데이터 백업(JSON)</b>으로 보관해두세요.</p>
     <div style="text-align:center;margin-top:10px;display:flex;gap:14px;justify-content:center">
-      <button id="btn-reset" style="border:none;background:none;color:var(--ink-soft);font-family:inherit;font-size:12px;cursor:pointer;text-decoration:underline">처음 예시 데이터로 되돌리기</button>
+      <button id="btn-reset" style="border:none;background:none;color:var(--ink-soft);font-family:inherit;font-size:12px;cursor:pointer;text-decoration:underline">기본 장소 데이터로 초기화</button>
       <button id="btn-chpw" style="border:none;background:none;color:var(--ink-soft);font-family:inherit;font-size:12px;cursor:pointer;text-decoration:underline">관리자 비밀번호 변경</button>
     </div>
-    <p class="hint">💡 수정하면 오른쪽 미리보기에 바로 반영되고, 자동으로 임시 저장돼요. <b>저장</b> 버튼을 누르면 이 브라우저에 확실히 보관되어, 다음에 파일을 다시 열어도 그대로 남아 있습니다. 위도·경도는 임시 좌표라 정확한 값을 넣으면 지도·거리도 정확해집니다.</p>
+    <p class="hint">💡 입력한 내용은 미리보기 화면에 바로 보이고, <b>Firebase에 저장하고 앱 반영</b>을 눌러야 모든 기기와 다른 사용자에게 공유됩니다. 위도·경도를 정확히 입력하면 지도와 내 주변 거리 표시도 더 정확해집니다.</p>
   </div>
 
   <!-- ============ RIGHT: PHONE PREVIEW ============ -->
   <div class="preview-wrap">
-    <div class="preview-label">📱 실제 앱 미리보기</div>
+    <div class="preview-label">📱 앱 반영 미리보기</div>
     <div class="phone">
       <div class="notch"></div>
       <div class="screen">
@@ -584,7 +585,7 @@ window.firebaseGardenReady = (async function(){
 const gardenData = [
   {
     id:1, name:"첨단아미둘레길", address:"광주광역시 광산구 월계동 일원",
-    lat:35.2335, lng:126.8560, category:"산책길", photos:["정원사진/첨단아미둘레길/p1.png","정원사진/첨단아미둘레길/p2.png"],
+    lat:35.2335, lng:126.8560, category:"산책길", photos:[],
     summary:"첨단1동 주민들이 일상적으로 걷기 좋은 생활권 녹지 산책길",
     description:"완충녹지를 따라 이어지는 산책 공간으로, 주민들이 가까운 거리에서 걷고 쉬기 좋은 공간입니다.",
     points:"조용한 산책, 생활권 녹지, 주민 이용이 많은 길",
@@ -592,7 +593,7 @@ const gardenData = [
   },
   {
     id:2, name:"금구초녹도", address:"광주광역시 광산구 금구초등학교 인근",
-    lat:35.1900, lng:126.8250, category:"녹도", photos:["정원사진/금구초녹도/p1.png","정원사진/금구초녹도/p2.png","정원사진/금구초녹도/p3.png","정원사진/금구초녹도/p4.png","정원사진/금구초녹도/p5.png"],
+    lat:35.1900, lng:126.8250, category:"녹도", photos:[],
     summary:"학교 주변에서 가볍게 걷기 좋은 생활권 녹도",
     description:"주거지와 학교 주변에 조성된 녹지축으로, 일상 속에서 짧게 산책하기 좋은 공간입니다.",
     points:"생활권 녹도, 가벼운 산책, 등하굣길 주변 녹지",
@@ -600,7 +601,7 @@ const gardenData = [
   },
   {
     id:3, name:"월곡동녹도", address:"광주광역시 광산구 월곡동 일원",
-    lat:35.1740, lng:126.8070, category:"녹도", photos:["정원사진/월곡동녹도/p1.png","정원사진/월곡동녹도/p2.png","정원사진/월곡동녹도/p3.png","정원사진/월곡동녹도/p4.png"],
+    lat:35.1740, lng:126.8070, category:"녹도", photos:[],
     summary:"월곡동 생활권에서 편하게 걸을 수 있는 녹도",
     description:"마을 가까이에 있는 녹지 공간으로, 잠시 걷거나 쉬어가기 좋은 생활권 산책 공간입니다.",
     points:"동네 산책, 생활권 녹지, 짧은 휴식",
@@ -608,7 +609,7 @@ const gardenData = [
   },
   {
     id:4, name:"쌍암공원", address:"광주광역시 광산구 쌍암동",
-    lat:35.2270, lng:126.8490, category:"공원", photos:["정원사진/쌍암공원/p1.png","정원사진/쌍암공원/p2.png","정원사진/쌍암공원/p3.png","정원사진/쌍암공원/p4.png","정원사진/쌍암공원/p5.png","정원사진/쌍암공원/p6.png"],
+    lat:35.2270, lng:126.8490, category:"공원", photos:[],
     summary:"첨단지구 주민들이 자주 찾는 도심 속 휴식 공간",
     description:"넓은 잔디광장과 나무 그늘이 어우러진 근린공원으로, 가벼운 산책과 휴식을 함께 즐기기 좋습니다.",
     points:"도심 속 휴식, 넓은 잔디광장, 가족 산책",
@@ -616,7 +617,7 @@ const gardenData = [
   },
   {
     id:5, name:"응암공원", address:"광주광역시 광산구 응암동",
-    lat:35.2150, lng:126.8380, category:"공원", photos:["정원사진/응암공원/p1.png","정원사진/응암공원/p2.png"],
+    lat:35.2150, lng:126.8380, category:"공원", photos:[],
     summary:"생활권 가까이에서 산책과 휴식을 즐길 수 있는 공원",
     description:"마을과 가까운 거리에 자리한 근린공원으로, 일상 속에서 부담 없이 걷고 쉬기 좋은 녹지 공간입니다.",
     points:"생활권 녹지, 조용한 산책, 가벼운 휴식",
@@ -624,7 +625,7 @@ const gardenData = [
   },
   {
     id:6, name:"수완호수공원", address:"광주광역시 광산구 수완동",
-    lat:35.1990, lng:126.8200, category:"수변공원", photos:["정원사진/수완호수공원/p1.png","정원사진/수완호수공원/p2.png","정원사진/수완호수공원/p3.png","정원사진/수완호수공원/p4.png","정원사진/수완호수공원/p5.png"],
+    lat:35.1990, lng:126.8200, category:"수변공원", photos:[],
     summary:"호수를 따라 걷기 좋은 광산구 대표 산책 공간",
     description:"호수 둘레를 따라 산책로가 이어지는 수변공원으로, 물가 풍경을 보며 천천히 걷기 좋은 공간입니다.",
     points:"호수 산책, 물가 풍경, 야간 산책",
@@ -632,7 +633,7 @@ const gardenData = [
   },
   {
     id:7, name:"첨단마을둘레길", address:"광주광역시 광산구 첨단지구 일원",
-    lat:35.2300, lng:126.8500, category:"산책길", photos:["정원사진/첨단마을둘레길/p1.png","정원사진/첨단마을둘레길/p2.png"],
+    lat:35.2300, lng:126.8500, category:"산책길", photos:[],
     summary:"첨단마을 생활권에서 가볍게 걷기 좋은 둘레길",
     description:"첨단지구 생활권과 가까운 산책 공간으로, 짧은 걷기와 휴식을 즐기기 좋은 길입니다.",
     points:"동네 산책, 생활권 둘레길, 가벼운 휴식",
@@ -640,7 +641,7 @@ const gardenData = [
   },
   {
     id:8, name:"황룡강 생태정원", address:"광주광역시 광산구 송정동 황룡강 일원",
-    lat:35.1450, lng:126.7920, category:"생태정원", photos:["정원사진/황룡강생태정원/p1.png","정원사진/황룡강생태정원/p2.png"],
+    lat:35.1450, lng:126.7920, category:"생태정원", photos:[],
     summary:"자연과 강변 경관을 함께 느낄 수 있는 생태형 정원 공간",
     description:"황룡강변을 따라 조성된 생태정원으로, 계절마다 피는 꽃과 강변 경관을 함께 즐길 수 있습니다.",
     points:"계절꽃, 강변 경관, 생태 산책",
@@ -648,12 +649,21 @@ const gardenData = [
   }
 ];
 
-/* 사진 데이터 정규화: 예전 단일 photo → photos 배열 (하위호환) */
+/* 사진 데이터 정규화: Firebase Storage에 올라간 공유 사진 URL만 사용 */
+function isFirebasePhotoUrl(url){
+  const u = String(url||"").trim();
+  return u.startsWith("https://firebasestorage.googleapis.com/") || u.startsWith("https://storage.googleapis.com/");
+}
 function normalizePhotos(arr){
   arr.forEach(g=>{
-    if(!Array.isArray(g.photos)) g.photos = g.photo ? [g.photo] : [];
+    const raw = Array.isArray(g.photos) ? g.photos : (g.photo ? [g.photo] : []);
+    const unique=[];
+    raw.forEach(p=>{
+      const u=String(p||"").trim();
+      if(isFirebasePhotoUrl(u) && !unique.includes(u)) unique.push(u);
+    });
+    g.photos = unique.slice(0,10);
     if("photo" in g) delete g.photo;
-    if(g.photos.length>10) g.photos=g.photos.slice(0,10);
   });
   return arr;
 }
@@ -673,84 +683,13 @@ function normalizeThemes(arr){
    - 이미 GitHub 저장소 루트에 올린 사진 파일명을 장소별 photos 배열에 붙입니다.
    - 기존 브라우저 localStorage에 예전 데이터가 남아 있어도 한 번만 자동 보정됩니다. */
 function ensurePublicPhotoData(arr){
-  const byName = name => String(name||"").replace(/\s/g,"");
-  const canonicalPhotoMap = {
-    "첨단아미둘레길":["정원사진/첨단아미둘레길/p1.png","정원사진/첨단아미둘레길/p2.png"],
-    "첨단마을둘레길":["정원사진/첨단마을둘레길/p1.png","정원사진/첨단마을둘레길/p2.png"],
-    "금구초녹도":["정원사진/금구초녹도/p1.png","정원사진/금구초녹도/p2.png","정원사진/금구초녹도/p3.png","정원사진/금구초녹도/p4.png","정원사진/금구초녹도/p5.png"],
-    "월곡동녹도":["정원사진/월곡동녹도/p1.png","정원사진/월곡동녹도/p2.png","정원사진/월곡동녹도/p3.png","정원사진/월곡동녹도/p4.png"],
-    "쌍암공원":["정원사진/쌍암공원/p1.png","정원사진/쌍암공원/p2.png","정원사진/쌍암공원/p3.png","정원사진/쌍암공원/p4.png","정원사진/쌍암공원/p5.png","정원사진/쌍암공원/p6.png"],
-    "응암공원":["정원사진/응암공원/p1.png","정원사진/응암공원/p2.png"],
-    "수완호수공원":["정원사진/수완호수공원/p1.png","정원사진/수완호수공원/p2.png","정원사진/수완호수공원/p3.png","정원사진/수완호수공원/p4.png","정원사진/수완호수공원/p5.png"],
-    "황룡강생태정원":["정원사진/황룡강생태정원/p1.png","정원사진/황룡강생태정원/p2.png"]
-  };
-
-  const cleanOldRootPhotos = photos => (Array.isArray(photos) ? photos : [])
-    .filter(p => p && !["cheom1.png","cheom2.png","hwang1.png","kumgu1.png","wolgok1.png"].includes(String(p).trim()));
-
-  const setCanonicalPhotos = g => {
-    const key = byName(g.name);
-    if(canonicalPhotoMap[key]){
-      const existing = cleanOldRootPhotos(g.photos).filter(p => !String(p).startsWith("정원사진/"));
-      g.photos = [...canonicalPhotoMap[key], ...existing].slice(0,10);
-    }
-  };
-
-  arr.forEach(setCanonicalPhotos);
-
-  const addIfMissing = place => {
-    if(arr.some(g => byName(g.name) === byName(place.name))) return;
-    const maxId = Math.max(0, ...arr.map(g => Number(g.id)||0));
-    arr.push(Object.assign({id:maxId+1}, place));
-  };
-
-  addIfMissing({
-    name:"금구초녹도", address:"광주광역시 광산구 금구초등학교 인근",
-    lat:35.1900, lng:126.8250, category:"녹도", photos:canonicalPhotoMap["금구초녹도"],
-    summary:"학교 주변에서 가볍게 걷기 좋은 생활권 녹도",
-    description:"주거지와 학교 주변에 조성된 녹지축으로, 일상 속에서 짧게 산책하기 좋은 공간입니다.",
-    points:"생활권 녹도, 가벼운 산책, 등하굣길 주변 녹지",
-    facilities:"산책로", seasons:"봄, 가을", times:"아침, 저녁",
-    note:"좌표는 임시값입니다. 관리자 모드에서 정확한 위도·경도로 수정하세요.",
-    themes:["walk","rest","photo"]
-  });
-
-  addIfMissing({
-    name:"월곡동녹도", address:"광주광역시 광산구 월곡동 일원",
-    lat:35.1740, lng:126.8070, category:"녹도", photos:canonicalPhotoMap["월곡동녹도"],
-    summary:"월곡동 생활권에서 편하게 걸을 수 있는 녹도",
-    description:"마을 가까이에 있는 녹지 공간으로, 잠시 걷거나 쉬어가기 좋은 생활권 산책 공간입니다.",
-    points:"동네 산책, 생활권 녹지, 짧은 휴식",
-    facilities:"산책로", seasons:"봄, 가을", times:"아침, 저녁",
-    note:"좌표는 임시값입니다. 관리자 모드에서 정확한 위도·경도로 수정하세요.",
-    themes:["walk","rest","photo"]
-  });
-
-  addIfMissing({
-    name:"첨단마을둘레길", address:"광주광역시 광산구 첨단지구 일원",
-    lat:35.2300, lng:126.8500, category:"산책길", photos:canonicalPhotoMap["첨단마을둘레길"],
-    summary:"첨단마을 생활권에서 가볍게 걷기 좋은 둘레길",
-    description:"첨단지구 생활권과 가까운 산책 공간으로, 짧은 걷기와 휴식을 즐기기 좋은 길입니다.",
-    points:"동네 산책, 생활권 둘레길, 가벼운 휴식",
-    facilities:"산책로", seasons:"봄, 가을", times:"아침, 저녁",
-    note:"좌표는 임시값입니다. 관리자 모드에서 정확한 위도·경도로 수정하세요.",
-    themes:["walk","rest","photo"]
-  });
-
-  arr.forEach(setCanonicalPhotos);
-  return arr;
+  // Firebase 전용 버전: GitHub 정원사진 경로는 더 이상 자동 연결하지 않습니다.
+  return normalizePhotos(arr);
 }
 
 function runPublicPhotoMigration(){
-  const MIGRATION_KEY="jeongwon_photo_files_v3";
-  try{
-    if(localStorage.getItem(MIGRATION_KEY)==="done") return;
-    ensurePublicPhotoData(gardenData);
-    localStorage.setItem(MIGRATION_KEY,"done");
-    persist();
-  }catch(e){
-    ensurePublicPhotoData(gardenData);
-  }
+  // Firebase 전용 버전: 별도 GitHub 사진 경로 보정 없음.
+  normalizePhotos(gardenData);
 }
 
 /* 처음 예시 데이터 원본 (되돌리기용) */
@@ -760,12 +699,6 @@ const STORE_KEY="jeongwon_garden_v1";
 function persist(){
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify(gardenData));
-    if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
-      window.firebaseGardenSave(gardenData).catch(err=>{
-        console.warn("Firebase 저장 실패", err);
-        toast("⚠️ Firebase 저장 실패: 권한 또는 설정을 확인하세요");
-      });
-    }
     return true;
   }
   catch(e){ return false; }
@@ -783,13 +716,7 @@ function scheduleSave(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
     persist();
-    if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
-      window.firebaseGardenSave(gardenData).catch(err=>{
-        console.error(err);
-        toast("⚠️ Firebase 저장 실패: 규칙·권한을 확인하세요");
-      });
-    }
-  },600);
+  },500);
 }
 
 function toast(msg){
@@ -918,38 +845,18 @@ function openLink(u){window.open(u,'_blank');}
 
 /* photo block — URL 있으면 이미지, 없으면 초록 정원 아이콘 */
 const leafIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="#4f9a63" stroke-width="1.6"><path d="M11 20A7 7 0 0 1 4 13C4 8 8 4 12 3c4 1 8 5 8 10a7 7 0 0 1-7 7Z"/><path d="M12 21V9"/><path d="M12 13c-2-1-3-3-3-3M12 16c2-1 3-3 3-3"/></svg>`;
-/* 장소별 자동 사진 경로
-   - GitHub에 정원사진/장소명/p1.png ~ p10.png 형식으로 올리면
-     index.html을 다시 수정하지 않아도 앱이 자동으로 시도합니다.
-   - 없는 파일은 화면에서 자동으로 숨겨집니다. */
-const PHOTO_BASE_DIR = "정원사진";
+/* Firebase 전용 사진 경로
+   - 사진은 관리자 모드에서 업로드한 Firebase Storage URL만 사용합니다.
+   - GitHub의 정원사진/장소명/p1.png 방식은 더 이상 사용하지 않습니다. */
 const MAX_PLACE_PHOTOS = 10;
-const PLACE_PHOTO_FOLDER = {
-  "첨단아미둘레길":"첨단아미둘레길",
-  "첨단마을둘레길":"첨단마을둘레길",
-  "금구초녹도":"금구초녹도",
-  "월곡동녹도":"월곡동녹도",
-  "쌍암공원":"쌍암공원",
-  "응암공원":"응암공원",
-  "수완호수공원":"수완호수공원",
-  "황룡강생태정원":"황룡강생태정원"
-};
 function compactName(s){return String(s||"").replace(/\s/g,"");}
-function autoPhotoPaths(g){
-  const folder = PLACE_PHOTO_FOLDER[compactName(g.name)];
-  if(!folder) return [];
-  return Array.from({length:MAX_PLACE_PHOTOS},(_,i)=>`${PHOTO_BASE_DIR}/${folder}/p${i+1}.png`);
-}
+function autoPhotoPaths(g){ return []; }
 function photosOf(g){
-  const manual = Array.isArray(g.photos) ? g.photos.filter(u=>u&&String(u).trim()) : (g.photo ? [g.photo] : []);
-  const firebaseUrls = manual.filter(u=>String(u).startsWith("https://firebasestorage.googleapis.com/"));
-  const localUrls = manual.filter(u=>!String(u).startsWith("https://firebasestorage.googleapis.com/"));
-  const auto = autoPhotoPaths(g);
+  const raw = Array.isArray(g.photos) ? g.photos : (g.photo ? [g.photo] : []);
   const merged = [];
-  // Firebase에 업로드한 사진을 항상 먼저 보여줍니다.
-  [...firebaseUrls, ...localUrls, ...auto].forEach(u=>{
-    const key=String(u).trim();
-    if(key && !merged.includes(key)) merged.push(key);
+  raw.forEach(u=>{
+    const key=String(u||"").trim();
+    if(isFirebasePhotoUrl(key) && !merged.includes(key)) merged.push(key);
   });
   return merged.slice(0,MAX_PLACE_PHOTOS);
 }
@@ -1463,6 +1370,40 @@ function buildCatList(){
   document.getElementById("cat-list").innerHTML=[...new Set(gardenData.map(g=>g.category))].map(c=>`<option value="${esc(c)}">`).join("");
 }
 const EDFIELDS=["name","address","lat","lng","category","summary","description","points","facilities","seasons","times","note"];
+let isSavingToFirebase=false;
+function saveEditorFieldsToCurrentGarden(){
+  const g=gardenById(edId); if(!g) return null;
+  EDFIELDS.forEach(f=>{
+    const el=document.getElementById("ed-"+f);
+    if(!el) return;
+    g[f]=(f==="lat"||f==="lng")?parseFloat(el.value)||0:el.value;
+  });
+  if(!Array.isArray(g.photos)) g.photos=[];
+  if(!Array.isArray(g.themes)) g.themes=[];
+  normalizePhotos(gardenData); normalizeThemes(gardenData);
+  return g;
+}
+async function saveAllAdminChangesToFirebase(showToast=true){
+  saveEditorFieldsToCurrentGarden();
+  buildSelect(); buildCatList(); renderPhotoThumbs(); refreshPreview(); persist();
+  if(!(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function")){
+    if(showToast) toast("✅ 이 기기에 저장됐어요. Firebase 연결 후 다른 기기에도 반영됩니다");
+    return false;
+  }
+  if(isSavingToFirebase) return true;
+  isSavingToFirebase=true;
+  try{
+    await window.firebaseGardenSave(gardenData);
+    if(showToast) toast("☁️ 관리자 패널 수정 내용이 앱 화면과 다른 기기에 반영됐어요");
+    return true;
+  }catch(err){
+    console.error(err);
+    if(showToast) toast("⚠️ Firebase 저장 실패: Firestore 규칙·권한을 확인하세요");
+    return false;
+  }finally{
+    isSavingToFirebase=false;
+  }
+}
 function loadEditor(){
   const g=gardenById(edId); if(!g) return;
   EDFIELDS.forEach(f=>{document.getElementById("ed-"+f).value=g[f];});
@@ -1517,7 +1458,7 @@ function addPhotoUrl(){
 }
 function bindEditor(){
   buildSelect(); buildCatList(); loadEditor();
-  document.getElementById("ed-select").onchange=e=>{edId=parseInt(e.target.value);loadEditor();};
+  document.getElementById("ed-select").onchange=e=>{saveEditorFieldsToCurrentGarden(); persist(); edId=parseInt(e.target.value);loadEditor();};
   EDFIELDS.forEach(f=>{
     document.getElementById("ed-"+f).oninput=e=>{
       const g=gardenById(edId); if(!g) return;
@@ -1527,10 +1468,10 @@ function bindEditor(){
       refreshPreview(); scheduleSave();
     };
   });
-  // 사진 주소(URL) 추가
+  // Firebase 사진 URL 직접 추가
   document.getElementById("btn-photo-url-add").onclick=addPhotoUrl;
   document.getElementById("ed-photo-url").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addPhotoUrl();}});
-  // 기기 사진 첨부 (여러 장, 자동 축소 후 데이터로 저장)
+  // 기기 사진 업로드 (여러 장, 자동 축소 후 Firebase Storage에 저장)
   document.getElementById("btn-photo").onclick=()=>document.getElementById("ed-photo-file").click();
   document.getElementById("ed-photo-file").onchange=e=>{
     const g=gardenById(edId); if(!g) return;
@@ -1540,7 +1481,7 @@ function bindEditor(){
     if(e.target.files.length>remain) toast("최대 10장까지 등록돼요");
     if(window.firebaseGardenEnabled && typeof window.firebaseGardenUpload === "function"){
       const status=document.getElementById("ed-photo-status");
-      status.textContent="☁️ Firebase에 사진 업로드 중...";
+      status.textContent="☁️ 사진을 Firebase에 업로드하는 중...";
       Promise.all(files.map(async file=>{
         const url = await window.firebaseGardenUpload(g.name, file);
         const gg=gardenById(edId);
@@ -1548,10 +1489,8 @@ function bindEditor(){
       })).then(async()=>{
         status.textContent="✅ 업로드 완료";
         renderPhotoThumbs(); refreshPreview(); persist();
-        if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
-          await window.firebaseGardenSave(gardenData);
-        }
-        toast("☁️ 사진과 장소 정보가 Firebase에 저장됐어요");
+        await saveAllAdminChangesToFirebase(false);
+        toast("☁️ 사진과 장소 정보가 저장되어 앱에 반영됐어요");
       }).catch(err=>{
         console.error(err);
         status.textContent="⚠️ 업로드 실패: Firebase Storage 권한을 확인하세요";
@@ -1580,29 +1519,20 @@ function bindEditor(){
     e.target.value="";
   };
   document.getElementById("btn-add").onclick=()=>{
+    saveEditorFieldsToCurrentGarden(); persist();
     const newId=Math.max(0,...gardenData.map(g=>g.id))+1;
     gardenData.push({id:newId,name:"새 정원 "+newId,address:"광주광역시 광산구",lat:35.21,lng:126.83,
       category:"공원",photos:[],summary:"한줄소개를 입력하세요",description:"",points:"",facilities:"",seasons:"봄, 가을",times:"아침, 저녁",note:"",themes:[]});
     edId=newId; bindEditor(); refreshPreview(); scheduleSave();
   };
   document.getElementById("btn-save").onclick=async()=>{
-    const ok=persist();
-    if(window.firebaseGardenEnabled && typeof window.firebaseGardenSave === "function"){
-      try{
-        await window.firebaseGardenSave(gardenData);
-        toast("☁️ Firebase에 저장됐어요. 다른 기기에도 반영됩니다");
-      }catch(err){
-        console.error(err);
-        toast("⚠️ Firebase 저장 실패: Firestore 규칙을 확인하세요");
-      }
-    }else{
-      toast(ok?"✅ 이 기기에 저장되었어요":"⚠️ 이 미리보기에선 저장이 제한돼요");
-    }
+    await saveAllAdminChangesToFirebase(true);
   };
   document.getElementById("btn-reset").onclick=()=>{
     if(!confirm("모든 수정 내용을 지우고 처음 예시 데이터로 되돌릴까요?")) return;
     gardenData.length=0; JSON.parse(JSON.stringify(SEED)).forEach(x=>gardenData.push(x));
-    edId=gardenData[0].id; persist(); bindEditor(); refreshPreview(); scheduleSave();
+    edId=gardenData[0].id; persist(); bindEditor(); refreshPreview();
+    saveAllAdminChangesToFirebase(false);
     toast("🌱 처음 예시 데이터로 되돌렸어요");
   };
   document.getElementById("btn-chpw").onclick=()=>changeAdminPw();
@@ -1615,11 +1545,12 @@ function bindEditor(){
       let parsed;
       try{ parsed=importCSV(ev.target.result); }
       catch(err){ alert("불러오기 실패: "+err.message); return; }
-      if(!confirm(`엑셀에서 ${parsed.length}개 장소를 불러옵니다. 기존 데이터를 모두 교체할까요?\n(취소를 누르면 그대로 둡니다)`)) return;
+      if(!confirm(`CSV에서 ${parsed.length}개 장소를 불러옵니다. 기존 장소 데이터를 모두 교체할까요?\n(취소를 누르면 그대로 둡니다)`)) return;
       gardenData.length=0; parsed.forEach(x=>gardenData.push(x));
       normalizePhotos(gardenData); normalizeThemes(gardenData);
-      edId=gardenData[0].id; persist(); bindEditor(); refreshPreview(); scheduleSave();
-      toast(`📊 ${parsed.length}개 장소를 불러왔어요`);
+      edId=gardenData[0].id; persist(); bindEditor(); refreshPreview();
+      saveAllAdminChangesToFirebase(false);
+      toast(`📊 ${parsed.length}개 장소를 불러오고 Firebase에 반영했어요`);
     };
     reader.readAsText(file,"utf-8");
   };
@@ -1632,10 +1563,9 @@ function openJsonModal(){
   ov.innerHTML=`
     <div style="background:#fff;border-radius:22px;max-width:560px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(31,42,34,.4);overflow:hidden">
       <div style="padding:20px 22px 0">
-        <div style="font-size:19px;font-weight:800;color:#2f6b40">📄 정원 데이터 (JSON)</div>
+        <div style="font-size:19px;font-weight:800;color:#2f6b40">📦 정원 데이터 백업(JSON)</div>
         <div style="font-size:13px;color:#637065;line-height:1.6;margin-top:8px">
-          아래 내용이 정원 데이터예요. <b>복사하기</b>로 메모장 등에 붙여넣어 보관하거나,
-          <b>파일로 저장</b>을 눌러 내려받을 수 있어요. (미리보기 창에서는 다운로드가 막힐 수 있어, 그럴 땐 복사하기를 사용하세요.)
+          현재 Firebase에 반영할 수 있는 정원 데이터 백업입니다. <b>복사하기</b>로 보관하거나 <b>파일로 저장</b>을 눌러 내려받을 수 있습니다. 문제가 생겼을 때 복구용으로 사용할 수 있습니다.
         </div>
       </div>
       <textarea id="json-area" readonly style="margin:14px 22px;flex:1;min-height:200px;border:1.6px solid #d6ecdb;border-radius:14px;padding:13px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:#2b3a2e;background:#f6f8f1;resize:none;white-space:pre"></textarea>
@@ -1741,6 +1671,7 @@ async function initFirebaseSync(){
       gardenData.length=0;
       remote.forEach(x=>gardenData.push(x));
       normalizePhotos(gardenData); normalizeThemes(gardenData);
+      await window.firebaseGardenSave(gardenData);
       edId = gardenData[0].id;
       localStorage.setItem(STORE_KEY, JSON.stringify(gardenData));
       bindEditor(); refreshPreview();
